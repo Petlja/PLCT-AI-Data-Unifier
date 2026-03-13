@@ -1,0 +1,31 @@
+[project]
+name = "plct-ai-data-unifier"
+version = "0.1.0"
+description = "Unified AI data preparation tools for fetching and normalizing course repositories"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [
+  { name = "Jovan Maric", email = "jovan.maric@petlja.com" }
+]
+dependencies = [
+  "click>=8.0",
+  "docutils>=0.17",
+  "GitPython>=3.1",
+  "pandocfilters>=1.5.1",
+  "pydantic>=2.0",
+  "pypandoc>=1.5",
+  "PyYAML>=6.0",
+  "rich>=14.2.0,<15.0.0"
+]
+
+[project.scripts]
+plct-ai-data-unifier = "scripts.cli:main"
+data-preprocessing = "scripts.cli:main"
+
+[build-system]
+requires = ["hatchling>=1.24.2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["scripts"]

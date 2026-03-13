@@ -1,0 +1,4 @@
+# Copy this file to plct-ai-data-unifier-config.yaml and adjust repository URLs.
+repos:
+  - url: https://github.com/Petlja/demo_kurs
+  - url: https://github.com/Petlja/PLCT-intro
