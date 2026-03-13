@@ -1,7 +1,7 @@
 import os
 from typing import List
 from pydantic import BaseModel, ValidationError
-from scripts.utils import read_json, read_yaml
+from plct_ai_data_unifier.utils import read_json, read_yaml
 
 class RepoObject(BaseModel):
     url: str

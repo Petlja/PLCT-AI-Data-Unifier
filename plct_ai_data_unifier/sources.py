@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import unicodedata
 from pydantic import BaseModel, ValidationError
 from pypandoc import convert_file
-from scripts.utils import read_str, read_yaml, write_json, write_str
+from plct_ai_data_unifier.utils import read_str, read_yaml, write_json, write_str
 from logging import getLogger
 
 logger = getLogger(__name__)

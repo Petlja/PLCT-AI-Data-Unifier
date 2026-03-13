@@ -4,8 +4,8 @@ import os
 
 from git import Repo, GitCommandError
 from pydantic_core import ValidationError
-from scripts.config import is_git_repo, load_config
-from scripts.sources import MissingPandocError, collect_activity_files, convert_files, write_structure_json
+from plct_ai_data_unifier.config import is_git_repo, load_config
+from plct_ai_data_unifier.sources import MissingPandocError, collect_activity_files, convert_files, write_structure_json
 from logging import getLogger
 
 logger = getLogger(__name__)

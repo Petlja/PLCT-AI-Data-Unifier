@@ -5,7 +5,7 @@ from typing import Any, Optional, Dict, List
 from pandocfilters import Div, Para, Str, walk, CodeBlock, RawBlock
 
 from directive_templates import YOUTUBE_LINK
-from scripts.utils import read_str
+from plct_ai_data_unifier.utils import read_str
 
 
 def _read_include(repo_root: str, include_path: str) -> Optional[str]:
