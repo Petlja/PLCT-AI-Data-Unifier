@@ -6,6 +6,8 @@ This tool prepares course content for the PLCT AI pipeline. It extracts and enri
 
 In the [PLCT Server deployment flow](https://github.com/Petlja/PLCT-Server/blob/main/doc/getting_started.md), this tool sits before context generation and helps produce cleaner, consistent input for AI context creation.
 
+Supported source format:
+
 - [PLCT](https://github.com/Petlja/PLCT-CLI)
 - [PetljaDoc](https://github.com/Petlja/PetljaDoc)
 
