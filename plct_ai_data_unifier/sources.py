@@ -13,12 +13,12 @@ logger = getLogger(__name__)
 
 extra_rst = [
     "--standalone=false",
-    f"--filter={ os.path.join('.', 'scripts', 'pandoc_filters', 'filter_rst.py')}", 
+    f"--filter={ os.path.join('.', 'plct_ai_data_unifier', 'pandoc_filters', 'filter_rst.py')}", 
     "--quiet"
     ]
 extra_md = [
     "--standalone=false",
-    f"--filter={ os.path.join('.', 'scripts', 'pandoc_filters', 'filter_md.py')}", 
+    f"--filter={ os.path.join('.', 'plct_ai_data_unifier', 'pandoc_filters', 'filter_md.py')}", 
     "--quiet"
     ]
 
