@@ -130,6 +130,7 @@ Thumbs.db
 # Specific to this project
 repos/
 dataset/
+dataset-*/
 pandoc-*.msi
 dataset.zip
 dataset-dev/

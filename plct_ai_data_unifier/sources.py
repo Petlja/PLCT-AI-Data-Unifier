@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import unicodedata
 from pydantic import BaseModel, ValidationError
 from pypandoc import convert_file
+from plct_ai_data_unifier.metadata_model import UdBook, UdSegment
 from plct_ai_data_unifier.utils import read_str, read_yaml, write_json, write_str
 from logging import getLogger
 
@@ -73,10 +74,10 @@ def write_structure_json(base_dir: str, repo: str, output_dir: str) -> str:
     source_path = os.path.join(repo_path, "source")
 
     if os.path.exists(index_path):
-        structure = _build_petljadoc_structure(index_path, base_dir, output_dir, repo)
+        title, segments = _build_petljadoc_structure(index_path, base_dir, output_dir, repo)
         source_type = "petljadoc"
     elif os.path.isdir(source_path):
-        structure = _build_plct_structure(source_path, base_dir, output_dir, repo)
+        title, segments = _build_plct_structure(source_path, base_dir, output_dir, repo)
         source_type = "plct"
     else:
         raise FileNotFoundError(f"No recognized index file found in repo: {repo_path}")
@@ -85,14 +86,13 @@ def write_structure_json(base_dir: str, repo: str, output_dir: str) -> str:
     os.makedirs(output_repo_dir, exist_ok=True)
     structure_path = os.path.join(output_repo_dir, "structure.json")
 
-    payload = {
-        "schema_version": 1,
-        "book_id": repo,
-        "source_type": source_type,
-        "title": structure["title"],
-        "sub_segments": structure["sub_segments"],
-    }
-    write_json(structure_path, payload)
+    book = UdBook(
+        book_id=repo,
+        source_type=source_type,
+        title=title,
+        segments=segments,
+    )
+    write_json(structure_path, book.model_dump(exclude_none=True))
     return structure_path
 
 def convert_files(base_dir: str, repo: str, files: List[str], output_dir: str, max_workers: int) -> None:
@@ -135,11 +135,11 @@ def convert_files(base_dir: str, repo: str, files: List[str], output_dir: str, m
                     errors.append((src, e))
 
 
-def _build_petljadoc_structure(index_path: str, base_dir: str, output_dir: str, repo: str) -> Dict[str, Any]:
+def _build_petljadoc_structure(index_path: str, base_dir: str, output_dir: str, repo: str) -> Tuple[str, List[UdSegment]]:
     idx = _load_index(index_path)
     source_root = os.path.dirname(index_path)
     repo_title = idx.title or repo
-    lessons: List[Dict[str, Any]] = []
+    lessons: List[UdSegment] = []
 
     for lesson in idx.lessons:
         lesson_folder = lesson.folder or ""
@@ -148,11 +148,7 @@ def _build_petljadoc_structure(index_path: str, base_dir: str, output_dir: str, 
             os.path.relpath(lesson_source_ref, start=base_dir),
         )
 
-        lesson_node: Dict[str, Any] = {
-            "segment_id": lesson_segment_id,
-            "title": lesson.title or os.path.basename(lesson_folder) or "Untitled",
-            "sub_segments": [],
-        }
+        activity_segments: List[UdSegment] = []
 
         for act in lesson.activities:
             if act.type not in ("reading", "quiz"):
@@ -170,29 +166,34 @@ def _build_petljadoc_structure(index_path: str, base_dir: str, output_dir: str, 
                 os.path.relpath(src, start=base_dir),
             )
 
-            lesson_node["sub_segments"].append(
-                {
-                    "segment_id": activity_segment_id,
-                    "title": act.title or _fallback_title_from_path(src),
-                    "content_path": output_rel_path,
-                    "sub_segments": [],
-                }
+            activity_segments.append(
+                UdSegment(
+                    segment_id=activity_segment_id,
+                    title=act.title or _fallback_title_from_path(src),
+                    content_path=output_rel_path,
+                )
             )
 
-        lessons.append(lesson_node)
+        lessons.append(
+            UdSegment(
+                segment_id=lesson_segment_id,
+                title=lesson.title or os.path.basename(lesson_folder) or "Untitled",
+                sub_segments=activity_segments,
+            )
+        )
 
-    return {"title": repo_title, "sub_segments": lessons}
+    return repo_title, lessons
 
 
-def _build_plct_structure(source_root: str, base_dir: str, output_dir: str, repo: str) -> Dict[str, Any]:
+def _build_plct_structure(source_root: str, base_dir: str, output_dir: str, repo: str) -> Tuple[str, List[UdSegment]]:
     root_index = os.path.join(source_root, "index.md")
     visited: set[str] = set()
 
     if not os.path.exists(root_index):
-        return {"title": repo, "sub_segments": []}
+        return repo, []
 
     root_title = _extract_markdown_title(root_index) or repo
-    root_children: List[Dict[str, Any]] = []
+    root_children: List[UdSegment] = []
 
     for child in _extract_toctree_targets(root_index):
         child_path = _resolve_toctree_target(os.path.dirname(root_index), child)
@@ -202,7 +203,7 @@ def _build_plct_structure(source_root: str, base_dir: str, output_dir: str, repo
         if node is not None:
             root_children.append(node)
 
-    return {"title": root_title, "sub_segments": root_children}
+    return root_title, root_children
 
 
 def _build_plct_node(
@@ -211,7 +212,7 @@ def _build_plct_node(
     base_dir: str,
     output_dir: str,
     visited: set[str],
-) -> Optional[Dict[str, Any]]:
+) -> Optional[UdSegment]:
     md_path = os.path.normpath(md_path)
     if md_path in visited:
         return None
@@ -226,7 +227,7 @@ def _build_plct_node(
 
     if os.path.basename(md_path).lower() == "index.md":
         title = _extract_markdown_title(md_path) or _fallback_title_from_path(os.path.dirname(md_path))
-        children: List[Dict[str, Any]] = []
+        children: List[UdSegment] = []
         for child in _extract_toctree_targets(md_path):
             child_path = _resolve_toctree_target(os.path.dirname(md_path), child)
             if not child_path:
@@ -235,19 +236,18 @@ def _build_plct_node(
             if child_node is not None:
                 children.append(child_node)
 
-        return {
-            "segment_id": segment_id,
-            "title": title,
-            "sub_segments": children,
-        }
+        return UdSegment(
+            segment_id=segment_id,
+            title=title,
+            sub_segments=children,
+        )
 
     output_rel_path = _source_to_output_rel_path(base_dir, md_path).replace(os.sep, "/")
-    return {
-        "segment_id": segment_id,
-        "title": _extract_markdown_title(md_path) or _fallback_title_from_path(md_path),
-        "content_path": output_rel_path,
-        "sub_segments": [],
-    }
+    return UdSegment(
+        segment_id=segment_id,
+        title=_extract_markdown_title(md_path) or _fallback_title_from_path(md_path),
+        content_path=output_rel_path,
+    )
 
 
 def _extract_toctree_targets(md_path: str) -> List[str]:
