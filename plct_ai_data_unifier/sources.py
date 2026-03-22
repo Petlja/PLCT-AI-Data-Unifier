@@ -44,6 +44,7 @@ class CourseIndex(BaseModel):
     lang: Optional[str] = None
     title: Optional[str] = None
     description: Optional[dict] = None
+    longDescription: Optional[str] = None
     lessons: List[Lesson] = []
 
 class MissingPandocError(Exception):
@@ -74,11 +75,9 @@ def write_structure_json(base_dir: str, repo: str, output_dir: str) -> str:
     source_path = os.path.join(repo_path, "source")
 
     if os.path.exists(index_path):
-        title, segments = _build_petljadoc_structure(index_path, base_dir, output_dir, repo)
-        source_type = "petljadoc"
+        book = _build_petljadoc_structure(index_path, base_dir, output_dir, repo)
     elif os.path.isdir(source_path):
-        title, segments = _build_plct_structure(source_path, base_dir, output_dir, repo)
-        source_type = "plct"
+        book = _build_plct_structure(source_path, base_dir, output_dir, repo)
     else:
         raise FileNotFoundError(f"No recognized index file found in repo: {repo_path}")
 
@@ -86,12 +85,6 @@ def write_structure_json(base_dir: str, repo: str, output_dir: str) -> str:
     os.makedirs(output_repo_dir, exist_ok=True)
     structure_path = os.path.join(output_repo_dir, "structure.json")
 
-    book = UdBook(
-        book_id=repo,
-        source_type=source_type,
-        title=title,
-        segments=segments,
-    )
     write_json(structure_path, book.model_dump(exclude_none=True))
     return structure_path
 
@@ -135,7 +128,7 @@ def convert_files(base_dir: str, repo: str, files: List[str], output_dir: str, m
                     errors.append((src, e))
 
 
-def _build_petljadoc_structure(index_path: str, base_dir: str, output_dir: str, repo: str) -> Tuple[str, List[UdSegment]]:
+def _build_petljadoc_structure(index_path: str, base_dir: str, output_dir: str, repo: str) -> UdBook:
     idx = _load_index(index_path)
     source_root = os.path.dirname(index_path)
     repo_title = idx.title or repo
@@ -182,15 +175,21 @@ def _build_petljadoc_structure(index_path: str, base_dir: str, output_dir: str, 
             )
         )
 
-    return repo_title, lessons
+    return UdBook(
+        book_id=idx.courseId,
+        source_type="petljadoc",
+        title=repo_title,
+        description=idx.longDescription,
+        segments=lessons,
+    )
 
 
-def _build_plct_structure(source_root: str, base_dir: str, output_dir: str, repo: str) -> Tuple[str, List[UdSegment]]:
+def _build_plct_structure(source_root: str, base_dir: str, output_dir: str, repo: str) -> UdBook:
     root_index = os.path.join(source_root, "index.md")
     visited: set[str] = set()
 
     if not os.path.exists(root_index):
-        return repo, []
+        return UdBook(book_id=repo, source_type="plct", title=repo)
 
     root_title = _extract_markdown_title(root_index) or repo
     root_children: List[UdSegment] = []
@@ -203,7 +202,12 @@ def _build_plct_structure(source_root: str, base_dir: str, output_dir: str, repo
         if node is not None:
             root_children.append(node)
 
-    return root_title, root_children
+    return UdBook(
+        book_id=repo,
+        source_type="plct",
+        title=root_title,
+        segments=root_children,
+    )
 
 
 def _build_plct_node(

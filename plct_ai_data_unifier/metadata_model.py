@@ -16,7 +16,8 @@ Typical consumer usage::
 
 from __future__ import annotations
 
-from typing import Literal, Optional, List
+from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -30,8 +31,8 @@ class UdSegment(BaseModel):
 
     segment_id: str
     title: str
-    content_path: Optional[str] = None
-    sub_segments: List[UdSegment] = Field(default_factory=list)
+    content_path: str | None = None
+    sub_segments: list[UdSegment] = Field(default_factory=list)
 
 
 class UdBook(BaseModel):
@@ -41,4 +42,27 @@ class UdBook(BaseModel):
     book_id: str
     source_type: Literal["petljadoc", "plct"]
     title: str
-    segments: List[UdSegment] = Field(default_factory=list)
+    description: dict | None = None
+    segments: list[UdSegment] = Field(default_factory=list)
+
+
+    base_path: str | None = Field(default=None, exclude=True)
+
+    @classmethod
+    def load_dataset(cls, dataset_dir: str | Path) -> list[UdBook]:
+        """Load all books from a dataset directory.
+
+        Scans immediate subdirectories of ``dataset_dir`` for a
+        ``structure.json`` file and returns a list of validated
+        ``UdBook`` instances with ``base_path`` set to the
+        subdirectory path.
+        """
+        dataset_path = Path(dataset_dir)
+        books: list[UdBook] = []
+        for child in sorted(dataset_path.iterdir()):
+            structure_file = child / "structure.json"
+            if child.is_dir() and structure_file.is_file():
+                book = cls.model_validate_json(structure_file.read_text(encoding="utf-8"))
+                book.base_path = child.as_posix()
+                books.append(book)
+        return books
