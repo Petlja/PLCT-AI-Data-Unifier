@@ -17,9 +17,37 @@ Typical consumer usage::
 from __future__ import annotations
 
 from pathlib import Path
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, Field
+
+
+class PetljaActivityEnum(StrEnum):
+    """Petlja activity types from course YAML metadata."""
+
+    READING = "reading"
+    QUIZ = "quiz"
+    CODINGQUIZ = "codingquiz"
+    VIDEO = "video"
+    PDF = "pdf"
+
+
+class PetljaLectureEnum(StrEnum):
+    """Petlja didactic segment types (for example, index-like lecture nodes)."""
+
+    LECTURE = "lecture"
+
+
+class PlctSegmentEnum(StrEnum):
+    """PLCT segment types placeholder until PLCT introduces a stable taxonomy."""
+    LESSON = "lesson"
+    ACTIVITY = "activity"
+
+
+type UdSegmentSourceType = (
+    PetljaActivityEnum | PetljaLectureEnum | PlctSegmentEnum | str
+)
 
 
 class UdSegment(BaseModel):
@@ -33,6 +61,7 @@ class UdSegment(BaseModel):
     title: str
     content_path: str | None = None
     sub_segments: list[UdSegment] = Field(default_factory=list)
+    source_type: UdSegmentSourceType | None = None
 
 
 class UdBook(BaseModel):

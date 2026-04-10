@@ -6,11 +6,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import unicodedata
 from pydantic import BaseModel, ValidationError
 from pypandoc import convert_file
-from plct_ai_data_unifier.metadata_model import UdBook, UdSegment
+from plct_ai_data_unifier.metadata_model import (
+    PetljaActivityEnum,
+    PetljaLectureEnum,
+    PlctSegmentEnum,
+    UdBook,
+    UdSegment,
+)
 from plct_ai_data_unifier.utils import read_str, read_yaml, write_json, write_str
 from logging import getLogger
 
 logger = getLogger(__name__)
+PETLJA_ACTIVITY_TYPES = {item.value for item in PetljaActivityEnum}
 
 extra_rst = [
     "--standalone=false",
@@ -164,6 +171,7 @@ def _build_petljadoc_structure(index_path: str, base_dir: str, output_dir: str, 
                     segment_id=activity_segment_id,
                     title=act.title or _fallback_title_from_path(src),
                     content_path=output_rel_path,
+                    source_type=PetljaActivityEnum(act.type),
                 )
             )
 
@@ -172,6 +180,7 @@ def _build_petljadoc_structure(index_path: str, base_dir: str, output_dir: str, 
                 segment_id=lesson_segment_id,
                 title=lesson.title or os.path.basename(lesson_folder) or "Untitled",
                 sub_segments=activity_segments,
+                source_type=PetljaLectureEnum.LECTURE,
             )
         )
 
@@ -244,6 +253,7 @@ def _build_plct_node(
             segment_id=segment_id,
             title=title,
             sub_segments=children,
+            source_type=PlctSegmentEnum.LESSON,
         )
 
     output_rel_path = _source_to_output_rel_path(base_dir, md_path).replace(os.sep, "/")
@@ -251,6 +261,7 @@ def _build_plct_node(
         segment_id=segment_id,
         title=_extract_markdown_title(md_path) or _fallback_title_from_path(md_path),
         content_path=output_rel_path,
+        source_type=PlctSegmentEnum.ACTIVITY,
     )
 
 
