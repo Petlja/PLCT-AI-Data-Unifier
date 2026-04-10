@@ -4,6 +4,7 @@ __all__ = [
     "cli",
     "config",
     "directive_templates",
+    "metadata_model",
     "sources",
     "utils",
     "pandoc_filters",
